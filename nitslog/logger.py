@@ -338,7 +338,10 @@ class TaskLogger:
             elif choice == 'q':
                 break
 
-if __name__ == "__main__":
+def main():
     logger = TaskLogger()
     logger.run()
     logger.generate_html()
+
+if __name__ == "__main__":
+    main()
