@@ -2,7 +2,7 @@
   {
     "date": "2025-02-17",
     "title": "Normalization",
-    "content": "1. Add e-mails to normalization\n2. Add websites to normalization\n3. Handle symbols + - * / in norm",
+    "content": "1. Add e-mails to normalization\n2. Add websites to normalization\n3. Handle symbols + - * / in norm\n4. Check abbreviations handling",
     "date_modified": "2025-02-17"
   }
 ]
