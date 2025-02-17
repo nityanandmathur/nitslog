@@ -15,10 +15,6 @@ from prompt_toolkit.document import Document
 import json
 from datetime import datetime
 import os
-import base64
-from PIL import ImageGrab, Image
-import io
-import pyperclip
 
 class TaskLogger:
     def __init__(self):
@@ -90,6 +86,7 @@ class TaskLogger:
         self.console.print(layout)
 
     def interactive_edit(self, initial_text="", title="", mode="add"):
+        # Ensure initial_text is a string and handle None case
         if initial_text is None:
             initial_text = ""
         
@@ -98,47 +95,41 @@ class TaskLogger:
             multiline=True,
         )
 
+        # Create key bindings
         kb = KeyBindings()
         
         @kb.add('c-q')
         def _(event):
+            # When quitting, return the original text to prevent data loss
             event.app.exit(result=initial_text)
             
         @kb.add('c-s')
         def _(event):
+            # Save the current buffer content
             event.app.exit(result=buffer.text)
-        
-        @kb.add('c-v')
-        def _(event):
-            try:
-                image = ImageGrab.grabclipboard()
-                if image:
-                    buffered = io.BytesIO()
-                    image.save(buffered, format="PNG")
-                    image_data = base64.b64encode(buffered.getvalue()).decode('utf-8')
-                    buffer.insert_text(f"\n[image:{image_data}]\n")
-                else:
-                    self.console.print("[yellow]No image found in clipboard![/yellow]")
-            except Exception as e:
-                self.console.print(f"[red]Error accessing clipboard: {str(e)}[/red]")
 
+        # Create title bar with mode-specific styling
         if mode == "add":
             title_text = f"[ Adding New Task: {title} ]"
         else:
             title_text = f"[ Editing Task: {title} ]"
 
+        # Create title window
         title_window = Window(
             FormattedTextControl(HTML(f"<b><style bg='blue' fg='white'> {title_text} </style></b>")),
             height=1
         )
 
+        # Create editor window with the existing content
         editor_window = Window(BufferControl(buffer=buffer))
 
+        # Create status bar
         status_bar = Window(
-            FormattedTextControl(HTML("<b>Ctrl+S</b> to save  <b>Ctrl+Q</b> to quit  <b>Ctrl+V</b> to paste image")),
+            FormattedTextControl(HTML("<b>Ctrl+S</b> to save  <b>Ctrl+Q</b> to quit")),
             height=1
         )
 
+        # Combine windows in a layout
         layout = PTLayout(
             HSplit([
                 title_window,
@@ -147,6 +138,7 @@ class TaskLogger:
             ])
         )
         
+        # Create application
         app = Application(
             layout=layout,
             key_bindings=kb,
@@ -154,11 +146,14 @@ class TaskLogger:
             mouse_support=True
         )
 
+        # Run the application and ensure we don't lose data
         try:
             result = app.run()
+            # If result is None (unexpected case), return original text
             return result if result is not None else initial_text
         except Exception as e:
             self.console.print(f"[red]Error in editor: {str(e)}[/red]")
+            # Return original text in case of error
             return initial_text
 
     def add_task(self):
@@ -168,27 +163,11 @@ class TaskLogger:
         self.console.print("\nEnter task content (Ctrl+S to save, Ctrl+Q to quit):")
         content = self.interactive_edit("", title=title, mode="add")
         
-        self.console.print("\nPaste an image from clipboard (Ctrl+V) or press Enter to skip:")
-        input("Press Enter after pasting the image...")
-        
-        image_data = ""
-        try:
-            image = ImageGrab.grabclipboard()
-            if image:
-                buffered = io.BytesIO()
-                image.save(buffered, format="PNG")
-                image_data = base64.b64encode(buffered.getvalue()).decode('utf-8')
-            else:
-                self.console.print("[yellow]No image found in clipboard![/yellow]")
-        except Exception as e:
-            self.console.print(f"[red]Error accessing clipboard: {str(e)}[/red]")
-        
         if content is not None and content.strip():  # Only add if there's content
             task = {
                 'date': datetime.now().strftime('%Y-%m-%d'),
                 'title': title,
-                'content': content,
-                'image': image_data
+                'content': content
             }
             
             self.tasks.append(task)
@@ -255,27 +234,13 @@ class TaskLogger:
             if 0 <= task_idx < len(self.tasks):
                 task = self.tasks[task_idx]
                 os.system('cls' if os.name == 'nt' else 'clear')
-                content = task['content']
-                
-                # Split content by image placeholders
-                parts = content.split('[image:')
-                task_text = Text(parts[0])
-                
-                for part in parts[1:]:
-                    image_data, text = part.split(']', 1)
-                    image_data = base64.b64decode(image_data)
-                    image = Image.open(io.BytesIO(image_data))
-                    image.show()
-                    task_text.append(text)
-                
-                task_panel = Panel(
-                    task_text,
+                self.console.print(Panel(
+                    f"[bold]{task['title']}[/bold]\n\n{task['content']}",
                     title=f"Task {task_num} - {task['date']}",
                     border_style="blue",
                     box=box.ROUNDED,
                     padding=(1, 2),
-                )
-                self.console.print(task_panel)
+                ))
             else:
                 self.console.print("[red]Invalid task number![/red]")
         except ValueError:
