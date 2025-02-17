@@ -15,6 +15,7 @@ from prompt_toolkit.document import Document
 import json
 from datetime import datetime
 import os
+import subprocess
 
 class TaskLogger:
     def __init__(self):
@@ -156,6 +157,15 @@ class TaskLogger:
             # Return original text in case of error
             return initial_text
 
+    def commit_and_push_changes(self, message):
+        try:
+            subprocess.run(["git", "add", "tasks.json", "tasks.html"], check=True)
+            subprocess.run(["git", "commit", "-m", message], check=True)
+            subprocess.run(["git", "push", "origin", "main"], check=True)
+            self.console.print("\n[green]Changes pushed to GitHub successfully![/green]")
+        except subprocess.CalledProcessError as e:
+            self.console.print(f"[red]Error pushing changes to GitHub: {str(e)}[/red]")
+
     def add_task(self):
         self.console.print("\n[bold blue]Adding New Task[/bold blue]")
         title = Prompt.ask("Enter task title")
@@ -172,6 +182,8 @@ class TaskLogger:
             
             self.tasks.append(task)
             self.save_tasks()
+            self.generate_html()
+            self.commit_and_push_changes("Added new task")
             self.console.print("\n[green]Task added successfully![/green]")
         
         input("\nPress Enter to continue...")
@@ -214,6 +226,8 @@ class TaskLogger:
                     })
                     
                     self.save_tasks()
+                    self.generate_html()
+                    self.commit_and_push_changes("Edited task")
                     self.console.print("\n[green]Task updated successfully![/green]")
             else:
                 self.console.print("[red]Invalid task number![/red]")
@@ -260,6 +274,8 @@ class TaskLogger:
             if 0 <= task_idx < len(self.tasks):
                 deleted_task = self.tasks.pop(task_idx)
                 self.save_tasks()
+                self.generate_html()
+                self.commit_and_push_changes("Deleted task")
                 self.console.print(f"\n[green]Deleted task: {deleted_task['title']}[/green]")
             else:
                 self.console.print("[red]Invalid task number![/red]")
